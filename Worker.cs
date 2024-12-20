@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
+using System.Diagnostics;
 
 namespace SystemRemoteService
 {
@@ -19,7 +20,7 @@ namespace SystemRemoteService
             listener.Prefixes.Add("http://+:8210/");
             listener.Start();
 
-            _logger.LogInformation("WebSocket server started at: http://localhost:8210");
+            _logger.LogInformation("Server started at: http://localhost:8210");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -27,20 +28,37 @@ namespace SystemRemoteService
                 {
                     HttpListenerContext context = await listener.GetContextAsync();
 
-                    if (context.Request.IsWebSocketRequest)
+                    switch (context.Request.Url!.AbsolutePath)
                     {
-                        HttpListenerWebSocketContext wsContext = await context.AcceptWebSocketAsync(null);
-                        _ = HandleWebSocket(wsContext.WebSocket, stoppingToken);
+                        case "/command":
+                            if (!context.Request.IsWebSocketRequest) CloseResponse();
+                            HttpListenerWebSocketContext wsContext = await context.AcceptWebSocketAsync(null);
+                            _ = HandleWebSocket(wsContext.WebSocket, stoppingToken);
+                            break;
+
+                        case "/tasklist":
+                            await HandleTaskListRequest(context);
+                            break;
+
+                        default:
+                            CloseResponse();
+                            break;
+                    }
+
+                    void CloseResponse()
+                    {
+                        context.Response.StatusCode = 404;
+                        context.Response.Close();
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"Error on WebSocket server: {ex.Message}");
+                    _logger.LogError($"Error on HTTP server: {ex.Message}");
                 }
             }
 
             listener.Stop();
-            _logger.LogInformation("WebSocket server stopped.");
+            _logger.LogInformation("Server stopped.");
         }
 
         private async Task HandleWebSocket(WebSocket socket, CancellationToken stoppingToken)
@@ -60,14 +78,23 @@ namespace SystemRemoteService
             await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Conexão encerrada", stoppingToken);
         }
 
+        private async Task HandleTaskListRequest(HttpListenerContext context)
+        {
+            string result = ExecuteCommand("tasklist");
+            byte[] response = Encoding.UTF8.GetBytes(result);
+
+            context.Response.StatusCode = 200;
+            await context.Response.OutputStream.WriteAsync(response, 0, response.Length);
+            context.Response.Close();
+        }
+
         private string ExecuteCommand(string command)
         {
             _logger.LogInformation($"{DateTime.Now} | Command: {command}");
             try
             {
-                using var process = new System.Diagnostics.Process();
-                process.StartInfo.FileName = "cmd.exe";
-                process.StartInfo.Arguments = $"/c {command}";
+                using var process = new Process();
+                process.StartInfo.FileName = command;
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.RedirectStandardError = true;
                 process.StartInfo.UseShellExecute = false;
@@ -82,7 +109,7 @@ namespace SystemRemoteService
             }
             catch (Exception ex)
             {
-                return $"Erro ao executar comando: {ex.Message}";
+                return $"Erro: {ex.Message}";
             }
         }
     }
