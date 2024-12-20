@@ -19,24 +19,24 @@ namespace SystemRemoteService
             listener.Prefixes.Add("http://+:8210/");
             listener.Start();
 
-            _logger.LogInformation("WebSocket server started at: http://localhost:8080");
+            _logger.LogInformation("WebSocket server started at: http://localhost:8210");
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                if (_logger.IsEnabled(LogLevel.Information))
+                try
                 {
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                    HttpListenerContext context = await listener.GetContextAsync();
+
+                    if (context.Request.IsWebSocketRequest)
+                    {
+                        HttpListenerWebSocketContext wsContext = await context.AcceptWebSocketAsync(null);
+                        _ = HandleWebSocket(wsContext.WebSocket, stoppingToken);
+                    }
                 }
-
-                HttpListenerContext context = await listener.GetContextAsync();
-
-                if (context.Request.IsWebSocketRequest)
+                catch (Exception ex)
                 {
-                    HttpListenerWebSocketContext wsContext = await context.AcceptWebSocketAsync(null);
-                    _ = HandleWebSocket(wsContext.WebSocket, stoppingToken);
+                    _logger.LogError($"Error on WebSocket server: {ex.Message}");
                 }
-
-                await Task.Delay(1000, stoppingToken);
             }
 
             listener.Stop();
@@ -62,6 +62,7 @@ namespace SystemRemoteService
 
         private string ExecuteCommand(string command)
         {
+            _logger.LogInformation($"{DateTime.Now} | Command: {command}");
             try
             {
                 using var process = new System.Diagnostics.Process();
