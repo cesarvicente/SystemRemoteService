@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Hosting.WindowsServices;
 using SystemRemoteService;
 
 var builder = Host.CreateDefaultBuilder(args);
