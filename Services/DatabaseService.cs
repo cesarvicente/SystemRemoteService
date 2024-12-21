@@ -1,0 +1,54 @@
+﻿using System.Text.Json;
+using SystemRemoteService.Models;
+
+namespace SystemRemoteService.Services;
+
+public class DatabaseService
+{
+    private const string FilePath = "DataBase/commands.json";
+
+    public static List<Command> LoadCommands()
+    {
+        if (!File.Exists(FilePath))
+            return new List<Command>();
+
+        var json = File.ReadAllText(FilePath);
+        return JsonSerializer.Deserialize<List<Command>>(json) ?? new List<Command>();
+    }
+
+    public static void SaveCommands(List<Command> commands)
+    {
+        var json = JsonSerializer.Serialize(commands, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(FilePath, json);
+    }
+
+    public static void AddCommand(Command command)
+    {
+        var commands = LoadCommands();
+        commands.Add(command);
+        SaveCommands(commands);
+    }
+
+    public static void UpdateCommand(Command command)
+    {
+        var commands = LoadCommands();
+        var existingCommand = commands.FirstOrDefault(c => c.Id == command.Id);
+        if (existingCommand != null)
+        {
+            existingCommand.Name = command.Name;
+            existingCommand.Description = command.Description;
+            SaveCommands(commands);
+        }
+    }
+
+    public static void DeleteCommand(int id)
+    {
+        var commands = LoadCommands();
+        var commandToRemove = commands.FirstOrDefault(c => c.Id == id);
+        if (commandToRemove != null)
+        {
+            commands.Remove(commandToRemove);
+            SaveCommands(commands);
+        }
+    }
+}
