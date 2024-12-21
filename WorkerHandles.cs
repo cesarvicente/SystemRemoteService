@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SystemRemoteService.Models;
 using SystemRemoteService.Services;
+using System.Text.Json;
 
 namespace SystemRemoteService
 {
@@ -40,7 +41,7 @@ namespace SystemRemoteService
 
         internal static async Task DatabaseRequest(HttpListenerContext context)
         {
-            string action = context.Request.QueryString["action"];
+            string? action = context.Request.QueryString["action"];
             string responseMessage;
 
             if (action == null)
@@ -64,7 +65,6 @@ namespace SystemRemoteService
                             {
                                 var newCommand = new Command
                                 {
-                                    Id = new Random().Next(1, 1000), // Simples geração de ID
                                     Prompt = name,
                                     Description = description
                                 };
@@ -74,23 +74,28 @@ namespace SystemRemoteService
                             break;
 
                         case "update":
-                            int id = int.Parse(context.Request.QueryString["id"]);
-                            name = context.Request.QueryString["name"];
-                            description = context.Request.QueryString["description"];
+                            string? id = context.Request.QueryString["id"];
+                            name = context.Request.QueryString[nameof(Command.Prompt)];
+                            description = context.Request.QueryString[nameof(Command.Description)];
                             var updatedCommand = new Command
                             {
-                                Id = id,
-                                Prompt = name,
-                                Description = description
+                                Id = id!,
+                                Prompt = name!,
+                                Description = description!
                             };
                             DatabaseService.UpdateCommand(updatedCommand);
                             responseMessage = $"Command {updatedCommand.Prompt} updated successfully.";
                             break;
 
                         case "delete":
-                            id = int.Parse(context.Request.QueryString["id"]);
-                            DatabaseService.DeleteCommand(id);
+                            id = context.Request.QueryString["id"];
+                            DatabaseService.DeleteCommand(id!);
                             responseMessage = $"Command with ID {id} deleted successfully.";
+                            break;
+
+                        case "list":
+                            var items = DatabaseService.LoadCommands();
+                            responseMessage = JsonSerializer.Serialize(items, new JsonSerializerOptions { WriteIndented = true });
                             break;
 
                         default:
@@ -145,7 +150,5 @@ namespace SystemRemoteService
             await context.Response.OutputStream.WriteAsync(response, 0, response.Length);
             context.Response.Close();
         }
-
-        
     }
 }

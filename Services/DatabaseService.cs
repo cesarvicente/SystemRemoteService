@@ -54,7 +54,7 @@ public class DatabaseService
         }
     }
 
-    public static void DeleteCommand(int id)
+    public static void DeleteCommand(string id)
     {
         var commands = LoadCommands();
         var commandToRemove = commands.FirstOrDefault(c => c.Id == id);

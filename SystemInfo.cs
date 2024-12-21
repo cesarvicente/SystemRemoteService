@@ -101,7 +101,7 @@ public class SystemInfo
         {
             foreach (var item in searcher.Get())
             {
-                networks.Add($"Description: {item["Description"]}");
+                networks.Add($"Description: {item["Name"]}");
                 networks.Add($"MAC Address: {item["MACAddress"]}");
                 networks.Add($"IP Address: {string.Join(", ", (string[])item["IPAddress"])}");
                 networks.Add($"Subnet Mask: {string.Join(", ", (string[])item["IPSubnet"])}");
