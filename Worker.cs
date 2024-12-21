@@ -40,6 +40,10 @@ namespace SystemRemoteService
                             await HandleTaskListRequest(context);
                             break;
 
+                        case "/info":
+                            await HandleInfoRequest(context);
+                            break;
+
                         default:
                             CloseResponse();
                             break;
@@ -61,6 +65,15 @@ namespace SystemRemoteService
             _logger.LogInformation("Server stopped.");
         }
 
+        private async Task HandleInfoRequest(HttpListenerContext context)
+        {
+            byte[] response = Encoding.UTF8.GetBytes(SystemInfo.GetSystemInformation());
+
+            context.Response.StatusCode = 200;
+            await context.Response.OutputStream.WriteAsync(response, 0, response.Length);
+            context.Response.Close();
+        }
+
         private async Task HandleWebSocket(WebSocket socket, CancellationToken stoppingToken)
         {
             byte[] buffer = new byte[1024];
@@ -80,7 +93,7 @@ namespace SystemRemoteService
 
         private async Task HandleTaskListRequest(HttpListenerContext context)
         {
-            string result = ExecuteCommand("tasklist");
+            string result = ExecuteCommand("tasklist", false);
             byte[] response = Encoding.UTF8.GetBytes(result);
 
             context.Response.StatusCode = 200;
@@ -88,13 +101,14 @@ namespace SystemRemoteService
             context.Response.Close();
         }
 
-        private string ExecuteCommand(string command)
+        private string ExecuteCommand(string command, bool logger = true)
         {
-            _logger.LogInformation($"{DateTime.Now} | Command: {command}");
+            if (logger) _logger.LogInformation($"{DateTime.Now} | Command: {command}");
             try
             {
                 using var process = new Process();
-                process.StartInfo.FileName = command;
+                process.StartInfo.FileName = "cmd.exe";
+                process.StartInfo.Arguments = $"/c {command}";
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.RedirectStandardError = true;
                 process.StartInfo.UseShellExecute = false;
