@@ -10,10 +10,23 @@ public class DatabaseService
     public static List<Command> LoadCommands()
     {
         if (!File.Exists(FilePath))
+        {
+            SaveCommands(new List<Command>());
             return new List<Command>();
+        }
 
         var json = File.ReadAllText(FilePath);
-        return JsonSerializer.Deserialize<List<Command>>(json) ?? new List<Command>();
+
+        if (string.IsNullOrWhiteSpace(json)) return new List<Command>();
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<Command>>(json) ?? new List<Command>();
+        }
+        catch (JsonException)
+        {
+            return new List<Command>();
+        }
     }
 
     public static void SaveCommands(List<Command> commands)
@@ -35,7 +48,7 @@ public class DatabaseService
         var existingCommand = commands.FirstOrDefault(c => c.Id == command.Id);
         if (existingCommand != null)
         {
-            existingCommand.Name = command.Name;
+            existingCommand.Prompt = command.Prompt;
             existingCommand.Description = command.Description;
             SaveCommands(commands);
         }

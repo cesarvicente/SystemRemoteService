@@ -54,22 +54,22 @@ namespace SystemRemoteService
                     switch (action.ToLower())
                     {
                         case "add":
-                            string name = context.Request.QueryString["name"];
-                            string description = context.Request.QueryString["description"];
+                            string? name = context.Request.QueryString[nameof(Command.Prompt)];
+                            string? description = context.Request.QueryString[nameof(Command.Description)];
                             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(description))
                             {
-                                responseMessage = "Name and Description are required.";
+                                responseMessage = "Prompt and Description are required.";
                             }
                             else
                             {
                                 var newCommand = new Command
                                 {
                                     Id = new Random().Next(1, 1000), // Simples geração de ID
-                                    Name = name,
+                                    Prompt = name,
                                     Description = description
                                 };
                                 DatabaseService.AddCommand(newCommand);
-                                responseMessage = $"Command {newCommand.Name} added successfully.";
+                                responseMessage = $"Command {newCommand.Prompt} added successfully.";
                             }
                             break;
 
@@ -80,11 +80,11 @@ namespace SystemRemoteService
                             var updatedCommand = new Command
                             {
                                 Id = id,
-                                Name = name,
+                                Prompt = name,
                                 Description = description
                             };
                             DatabaseService.UpdateCommand(updatedCommand);
-                            responseMessage = $"Command {updatedCommand.Name} updated successfully.";
+                            responseMessage = $"Command {updatedCommand.Prompt} updated successfully.";
                             break;
 
                         case "delete":
