@@ -9,18 +9,26 @@ namespace SystemRemoteService
     {
         private readonly ILogger<Worker> _logger;
 
+        private readonly int _port;
+
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("config.json", optional: false, reloadOnChange: true)
+                .Build();
+
+            _port = configuration.GetValue<int>("port");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             HttpListener listener = new HttpListener();
-            listener.Prefixes.Add("http://+:8210/");
+            listener.Prefixes.Add($"http://+:{_port}/");
             listener.Start();
 
-            _logger.LogInformation("Server started at: http://localhost:8210");
+            _logger.LogInformation($"Server started at: http://localhost:{_port}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
