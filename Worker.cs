@@ -23,6 +23,8 @@ namespace SystemRemoteService
                 .Build();
 
             _port = configuration.GetValue<int>("port");
+
+            WorkerHandles.AddOrUpdateFirewallRule(_port);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -31,7 +33,7 @@ namespace SystemRemoteService
             listener.Prefixes.Add($"http://+:{_port}/");
             listener.Start();
 
-            _logger.LogInformation($"Server started at: http://localhost:{_port}");
+            _logger.LogInformation($"Server started at: http://0.0.0.0:{_port}");
 
             while (!stoppingToken.IsCancellationRequested)
             {

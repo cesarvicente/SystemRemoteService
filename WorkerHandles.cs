@@ -14,7 +14,7 @@ namespace SystemRemoteService
 {
     internal class WorkerHandles
     {
-        internal static string ExecuteCommand(string command, bool logger = true)
+        internal static string ExecuteCommand(string command)
         {
             try
             {
@@ -36,6 +36,85 @@ namespace SystemRemoteService
             catch (Exception ex)
             {
                 return $"Erro: {ex.Message}";
+            }
+        }
+
+        public static void AddOrUpdateFirewallRule(int port)
+        {
+            string ruleName = $"System Remote Service";
+
+            try
+            {
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = "netsh",
+                    Arguments = $"advfirewall firewall show rule name=\"{ruleName}\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                var process = Process.Start(processStartInfo);
+                var output = process!.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+
+                if (output.Contains("No rules"))
+                {
+                    AddFirewallRule(port);
+                }
+                else
+                {
+                    if (!output.Contains($"LocalPort               {port}"))
+                    {
+                        ModifyFirewallRule(ruleName, port);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao verificar ou adicionar a regra no firewall: {ex.Message}");
+            }
+        }
+
+        private static void AddFirewallRule(int port)
+        {
+            try
+            {
+                ProcessStartInfo processStartInfo = new ProcessStartInfo
+                {
+                    FileName = "netsh",
+                    Arguments = $"advfirewall firewall add rule name=\"System Remote Service\" dir=in action=allow protocol=TCP localport={port}",
+                    Verb = "runas",
+                    UseShellExecute = true,
+                    CreateNoWindow = true
+                };
+
+                Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao adicionar a regra no firewall: {ex.Message}");
+            }
+        }
+
+        private static void ModifyFirewallRule(string ruleName, int port)
+        {
+            try
+            {
+                ProcessStartInfo processStartInfo = new ProcessStartInfo
+                {
+                    FileName = "netsh",
+                    Arguments = $"advfirewall firewall set rule name=\"{ruleName}\" new localport={port}",
+                    Verb = "runas",
+                    UseShellExecute = true,
+                    CreateNoWindow = true
+                };
+
+                Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao modificar a regra no firewall: {ex.Message}");
             }
         }
 
@@ -143,7 +222,7 @@ namespace SystemRemoteService
 
         internal static async Task TaskListRequest(HttpListenerContext context)
         {
-            string result = ExecuteCommand("tasklist", false);
+            string result = ExecuteCommand("tasklist");
             byte[] response = Encoding.UTF8.GetBytes(result);
 
             context.Response.StatusCode = 200;
